@@ -1,0 +1,32 @@
+name: Channel Finder
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run finder
+        env:
+          NICHE_KEYWORDS: ${{ vars.NICHE_KEYWORDS }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          STREAK_THRESHOLD: "3"
+        run: python channel_finder.py
+      - name: Save state
+        run: |
+          git config user.name "channel-finder-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add candidates.json qualifying_channels.md
+          git diff --staged --quiet || git commit -m "update state [skip ci]"
+          git pull --rebase -X ours origin main
+          git push
